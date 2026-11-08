@@ -1,4 +1,4 @@
-export type CaptionTemplate = "hormozi" | "beast" | "minimal" | "cyber" | "studio";
+export type CaptionTemplate = "hormozi" | "beast" | "minimal" | "cyber" | "studio" | "cinematic" | "explainer" | "editorial";
 export type HookSensitivity = "aggressive" | "balanced" | "context";
 export type AspectRatio = "9:16" | "1:1" | "16:9";
 export type DurationPreset = "short" | "medium" | "long";
@@ -114,12 +114,33 @@ export const TEMPLATE_META: Record<
     description:
       "Electric cyan and violet outer glow with glitch karaoke reveal",
   },
-  studio: {
+    studio: {
     name: "Studio Red",
     tag: "Edu / Story",
     letter: "S",
     description:
       "Red hook banner + italic tagline, left captions, punch-in zooms, vignette & keyword cutaway cards",
+  },
+  cinematic: {
+    name: "Cinematic Stack",
+    tag: "Storyteller",
+    letter: "C",
+    description:
+      "2-tier stacked bold text with soft cinematic drop shadow, no harsh outlines",
+  },
+  explainer: {
+    name: "Red Badge Explainer",
+    tag: "Deep Dive",
+    letter: "R",
+    description:
+      "Signature red topic pill badge header with clean educational captions & moody vignette",
+  },
+  editorial: {
+    name: "Editorial Podcast",
+    tag: "Interview",
+    letter: "E",
+    description:
+      "Quiet luxury Georgia serif subtitle, clean negative-space placement for talkshows",
   },
 };
 

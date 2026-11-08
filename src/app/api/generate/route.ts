@@ -21,7 +21,7 @@ function validSettings(s: unknown): s is GenerateSettings {
   if (!s || typeof s !== "object") return false;
   const o = s as Record<string, unknown>;
   return (
-    ["hormozi", "beast", "minimal", "cyber", "studio"].includes(o.template as string) &&
+    ["hormozi", "beast", "minimal", "cyber", "studio", "cinematic", "explainer", "editorial"].includes(o.template as string) &&
     ["short", "medium", "long"].includes(o.duration as string) &&
     ["aggressive", "balanced", "context"].includes(o.hook as string) &&
     ["9:16", "1:1", "16:9"].includes(o.ratio as string)

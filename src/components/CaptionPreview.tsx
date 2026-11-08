@@ -91,6 +91,7 @@ export function CaptionPreview({
     return null;
   }
 
+  // 1. Studio template
   if (template === "studio") {
     const chunk = studioVisibleChunks(data, title || data[0]?.text || "Clip").find(
       (c) => time >= c.start && time < c.end
@@ -179,6 +180,126 @@ export function CaptionPreview({
     );
   }
 
+  // 2. Cinematic Stack template (2-tier stacked storyteller)
+  if (template === "cinematic") {
+    const chunks = chunkWords(data, 3, 22);
+    const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
+    if (!currentChunk || time < currentChunk.start) return null;
+
+    const words = currentChunk.words;
+    const topWord = words.length > 1 ? words[0].text.toLowerCase() : null;
+    const bottomWords = (words.length > 1 ? words.slice(1) : words)
+      .map((w) => w.text.toLowerCase())
+      .join(" ");
+
+    return (
+      <div
+        className={`flex flex-col items-center justify-end text-center pointer-events-none select-none transition-all ${className}`}
+        style={{ paddingBottom: "22%" }}
+      >
+        <div className="flex flex-col items-center justify-center max-w-[92%] px-3">
+          {topWord && (
+            <span
+              className="text-[14px] font-semibold tracking-wider text-white/90 font-['Arial',sans-serif]"
+              style={{
+                textShadow: "0 2px 8px rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,0.9)",
+              }}
+            >
+              {topWord}
+            </span>
+          )}
+          <span
+            className="text-[26px] sm:text-[30px] font-black tracking-tight text-white font-['Arial_Black',Impact,sans-serif] leading-tight mt-0.5"
+            style={{
+              textShadow:
+                "0 4px 16px rgba(0,0,0,0.95), 2px 2px 0 rgba(0,0,0,0.95), -1px -1px 0 rgba(0,0,0,0.9)",
+            }}
+          >
+            {bottomWords}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Red Badge Explainer template
+  if (template === "explainer") {
+    const badgeText = (title || data[0]?.text || "EXPLAINER")
+      .toUpperCase()
+      .split(/\s+/)
+      .slice(0, 4)
+      .join(" ");
+    const chunks = chunkWords(data, 6, 42);
+    const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
+    const activeText =
+      currentChunk && time >= currentChunk.start
+        ? currentChunk.words.map((w) => w.text).join(" ")
+        : null;
+
+    return (
+      <div className={`pointer-events-none select-none ${className}`}>
+        {/* Top Red Topic Badge */}
+        <div className="absolute inset-x-0 flex justify-center" style={{ top: "15%" }}>
+          <div
+            className="px-3.5 py-1 rounded bg-[#DC2626] text-white text-[11px] font-black tracking-wider uppercase shadow-xl"
+            style={{
+              boxShadow: "0 4px 12px rgba(220, 38, 38, 0.4), 0 2px 4px rgba(0,0,0,0.8)",
+            }}
+          >
+            {badgeText}
+          </div>
+        </div>
+
+        {/* Educational Subtitle Sentences */}
+        {activeText && (
+          <div
+            className="absolute inset-x-0 flex items-end justify-center text-center px-4"
+            style={{ bottom: "18%" }}
+          >
+            <div
+              className="animate-fade-up text-white text-[16px] sm:text-[18px] font-bold font-['Arial',sans-serif] leading-snug tracking-tight max-w-[90%]"
+              style={{
+                textShadow:
+                  "0 2px 10px rgba(0,0,0,0.95), 1px 1px 0 #000, -1px -1px 0 #000",
+              }}
+            >
+              &ldquo;{activeText}&rdquo;
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 4. Editorial Podcast template (Georgia Serif)
+  if (template === "editorial") {
+    const chunks = chunkWords(data, 3, 22);
+    const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
+    if (!currentChunk || time < currentChunk.start) return null;
+
+    const text = currentChunk.words.map((w) => w.text.toLowerCase()).join(" ");
+
+    return (
+      <div
+        className={`flex items-end justify-center text-center pointer-events-none select-none transition-all ${className}`}
+        style={{ paddingBottom: "18%" }}
+      >
+        <div className="max-w-[88%] px-3">
+          <span
+            className="text-[22px] sm:text-[24px] font-normal text-white italic tracking-normal"
+            style={{
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              textShadow: "0 2px 12px rgba(0,0,0,0.9), 1px 1px 0 rgba(0,0,0,0.8)",
+            }}
+          >
+            {text}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 5. Hormozi, Beast, Cyber, Minimal templates
   let visible: {
     text: string;
     active: boolean;
@@ -195,7 +316,8 @@ export function CaptionPreview({
     const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
     if (currentChunk && time >= currentChunk.start) {
       visible = currentChunk.words.map((w, i) => {
-        const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
+        const end =
+          i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
         const active = time >= w.start && time < end;
         return {
           text: w.text.toUpperCase(),
@@ -211,7 +333,8 @@ export function CaptionPreview({
     const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
     if (currentChunk && time >= currentChunk.start) {
       const activeWord = currentChunk.words.find((w, i) => {
-        const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
+        const end =
+          i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
         return time >= w.start && time < end;
       });
       if (activeWord && time >= activeWord.start) {
@@ -231,7 +354,8 @@ export function CaptionPreview({
     const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
     if (currentChunk && time >= currentChunk.start) {
       visible = currentChunk.words.map((w, i) => {
-        const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
+        const end =
+          i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
         const active = time >= w.start && time < end;
         const revealed = time >= w.start;
         return {

@@ -188,7 +188,7 @@ export function LiveClipPreview({
         onPlay={() => setPlaying(true)}
       />
 
-      {template === "studio" && (
+      {(template === "studio" || template === "explainer") && (
         <div
           className="absolute inset-0 pointer-events-none"
           style={{

@@ -26,7 +26,7 @@ export async function POST(
   } catch {
     body = {};
   }
-  const template: CaptionTemplate = ["hormozi", "beast", "minimal", "cyber", "studio"].includes(body.template || "")
+  const template: CaptionTemplate = ["hormozi", "beast", "minimal", "cyber", "studio", "cinematic", "explainer", "editorial"].includes(body.template || "")
     ? (body.template as CaptionTemplate)
     : project.settings.template;
   const ratio: AspectRatio = ["9:16", "1:1", "16:9"].includes(body.ratio || "")
@@ -46,7 +46,7 @@ export async function POST(
   try {
     const { width, height } = await probeDimensions(source);
     let vf = cropFilter(ratio, width, height);
-    if (template === "studio") {
+    if (template === "studio" || template === "explainer") {
       // Vignette only: no erratic zoompan, frame stays completely stable
       vf += `,vignette=PI/5`;
     }

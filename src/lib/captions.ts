@@ -104,6 +104,42 @@ const STYLES: Record<CaptionTemplate, StyleSpec> = {
     marginV: 346,
     borderStyle: 1,
   },
+  cinematic: {
+    font: "Arial Black",
+    size: 62,
+    primary: "&H00FFFFFF",
+    outlineColor: "&H00000000",
+    back: "&H90000000",
+    bold: true,
+    outline: 1.5,
+    shadow: 3,
+    marginV: 280,
+    borderStyle: 1,
+  },
+  explainer: {
+    font: "Arial",
+    size: 48,
+    primary: "&H00FFFFFF",
+    outlineColor: "&H00000000",
+    back: "&H90000000",
+    bold: true,
+    outline: 2,
+    shadow: 2,
+    marginV: 220,
+    borderStyle: 1,
+  },
+  editorial: {
+    font: "Georgia",
+    size: 48,
+    primary: "&H00FFFFFF",
+    outlineColor: "&H00000000",
+    back: "&H80000000",
+    bold: false,
+    outline: 1,
+    shadow: 2,
+    marginV: 210,
+    borderStyle: 1,
+  },
 };
 
 export const HIGHLIGHT_WORDS = new Set([
@@ -160,14 +196,17 @@ export function buildAss(
   const align = template === "studio" ? 1 : 2;
   const marginL = template === "studio" ? Math.round(w * 0.06) : 40;
 
-  const extraStyles =
-    template === "studio"
-      ? `Style: Banner,Arial,${Math.round(h * 0.033)},&H00FFFFFF,&H0000FFFF,&H002D26E8,&H002D26E8,-1,0,0,0,100,100,0,0,3,5,0,8,0,0,0,1
+  let extraStyles = "";
+  if (template === "studio") {
+    extraStyles = `Style: Banner,Arial,${Math.round(h * 0.033)},&H00FFFFFF,&H0000FFFF,&H002D26E8,&H002D26E8,-1,0,0,0,100,100,0,0,3,5,0,8,0,0,0,1
 Style: Tag,Georgia,${Math.round(h * 0.03)},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,0,-1,0,0,100,100,0,0,1,2,1,8,0,0,0,1
 Style: CardL,Arial,${Math.round(h * 0.03)},&H00333333,&H0000FFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1
 Style: CardD,Arial,${Math.round(h * 0.03)},&H00EEEEEE,&H0000FFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1
-`
-      : "";
+`;
+  } else if (template === "explainer") {
+    extraStyles = `Style: RedBadge,Arial,${Math.round(h * 0.032)},&H00FFFFFF,&H0000FFFF,&H002626DC,&H002626DC,-1,0,0,0,100,100,0,0,3,7,0,8,0,0,0,1
+`;
+  }
 
   const header = `[Script Info]
 ScriptType: v4.00+
@@ -222,6 +261,64 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     for (const chunk of chunkWords(cues, 9, 64)) {
       const text = chunk.words.map((w) => escapeAss(w.text)).join(" ");
       push(chunk.start, chunk.end, `{\\fad(160,120)}${text}`);
+    }
+  } else if (template === "cinematic") {
+    // 2-tier stacked storyteller typography
+    for (const chunk of chunkWords(cues, 3, 22)) {
+      if (chunk.words.length <= 1) {
+        const w = chunk.words[0];
+        if (w) {
+          push(
+            chunk.start,
+            chunk.end,
+            `{\\fs${Math.round(fontSize * 1.15)}\\b1}${escapeAss(w.text.toLowerCase())}`
+          );
+        }
+      } else {
+        const topWord = chunk.words[0].text.toLowerCase();
+        const bottomWords = chunk.words.slice(1).map((w) => w.text.toLowerCase()).join(" ");
+        push(
+          chunk.start,
+          chunk.end,
+          `{\\fs${Math.round(fontSize * 0.65)}\\b0}${escapeAss(topWord)}\\N{\\fs${Math.round(fontSize * 1.2)}\\b1}${escapeAss(bottomWords)}`
+        );
+      }
+    }
+  } else if (template === "explainer") {
+    // Red Topic Badge at top
+    const firstSpeechStart = cues[0]?.words[0]?.start ?? cues[0]?.start ?? 0;
+    const badgeText = (title || cues[0]?.text || "EXPLAINER")
+      .toUpperCase()
+      .split(/\s+/)
+      .slice(0, 4)
+      .join(" ");
+    push(
+      firstSpeechStart,
+      clipDuration,
+      `{\\an8\\pos(${w / 2},${Math.round(h * 0.16)})}${escapeAss(badgeText)}`,
+      "RedBadge",
+      2
+    );
+
+    // Clean educational subtitle sentences below
+    for (const chunk of chunkWords(cues, 6, 42)) {
+      const text = chunk.words.map((w) => escapeAss(w.text)).join(" ");
+      push(chunk.start, chunk.end, `"${text}"`);
+    }
+  } else if (template === "editorial") {
+    // Georgia serif talkshow/podcast caption
+    const isLandscape = ratio === "16:9";
+    for (const chunk of chunkWords(cues, 3, 22)) {
+      const text = chunk.words.map((w) => escapeAss(w.text.toLowerCase())).join(" ");
+      if (isLandscape) {
+        push(
+          chunk.start,
+          chunk.end,
+          `{\\an6\\pos(${Math.round(w * 0.86)},${Math.round(h * 0.5)})\\fs${Math.round(fontSize * 1.05)}}${text}`
+        );
+      } else {
+        push(chunk.start, chunk.end, `{\\fs${fontSize}}${text}`);
+      }
     }
   } else if (template === "studio") {
     const firstSpeechStart = cues[0]?.words[0]?.start ?? cues[0]?.start ?? 0;
