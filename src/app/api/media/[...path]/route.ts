@@ -37,6 +37,12 @@ export async function GET(
   const stat = fs.statSync(file);
   const ext = path.extname(file).toLowerCase();
   const mime = MIME[ext] || "application/octet-stream";
+  const isDownload = req.nextUrl.searchParams.get("download") === "1";
+  const customParam = req.nextUrl.searchParams.get("filename");
+  const downloadName = customParam
+    ? `${customParam.replace(/[^a-zA-Z0-9 _-]/g, "").trim() || "clip"}${ext}`
+    : fileName;
+
   const range = req.headers.get("range");
 
   if (range && ext === ".mp4") {
@@ -51,14 +57,18 @@ export async function GET(
         });
       }
       const stream = fs.createReadStream(file, { start, end });
+      const headers: Record<string, string> = {
+        "Content-Range": `bytes ${start}-${end}/${stat.size}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": String(end - start + 1),
+        "Content-Type": mime,
+      };
+      if (isDownload) {
+        headers["Content-Disposition"] = `attachment; filename="${downloadName}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`;
+      }
       return new NextResponse(stream as unknown as ReadableStream, {
         status: 206,
-        headers: {
-          "Content-Range": `bytes ${start}-${end}/${stat.size}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": String(end - start + 1),
-          "Content-Type": mime,
-        },
+        headers,
       });
     }
   }
@@ -70,8 +80,8 @@ export async function GET(
     "Accept-Ranges": "bytes",
     "Cache-Control": "public, max-age=3600",
   };
-  if (req.nextUrl.searchParams.get("download") === "1") {
-    headers["Content-Disposition"] = `attachment; filename="${fileName}"`;
+  if (isDownload) {
+    headers["Content-Disposition"] = `attachment; filename="${downloadName}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`;
   }
   return new NextResponse(stream as unknown as ReadableStream, { headers });
 }

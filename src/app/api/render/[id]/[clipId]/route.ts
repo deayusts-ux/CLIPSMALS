@@ -47,8 +47,8 @@ export async function POST(
     const { width, height } = await probeDimensions(source);
     let vf = cropFilter(ratio, width, height);
     if (template === "studio") {
-      const dims = { "9:16": "720x1280", "1:1": "720x720", "16:9": "1280x720" }[ratio];
-      vf += `,zoompan=z='1+0.08*min(1,max(0,mod(it,3.2)/0.15))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${dims}:fps=30,vignette=PI/5`;
+      // Vignette only: no erratic zoompan, frame stays completely stable
+      vf += `,vignette=PI/5`;
     }
     const tag = `${clip.id}-${template}-${ratio.replace(":", "x")}${burnCaptions ? "-sub" : ""}`;
     const outFile = path.join(dir, `${tag}.mp4`);

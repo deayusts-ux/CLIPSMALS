@@ -60,7 +60,7 @@ const STYLES: Record<CaptionTemplate, StyleSpec> = {
     font: "Arial Black",
     size: 72,
     primary: "&H00FFFFFF",
-    outlineColor: "&H002222DD",
+    outlineColor: "&H00000000",
     back: "&H80000000",
     bold: true,
     outline: 6,
@@ -106,7 +106,7 @@ const STYLES: Record<CaptionTemplate, StyleSpec> = {
   },
 };
 
-const HIGHLIGHT_WORDS = new Set([
+export const HIGHLIGHT_WORDS = new Set([
   "secret", "rahasia", "free", "gratis", "million", "juta", "billion", "miliar",
   "never", "jangan", "stop", "best", "terbaik", "worst", "terburuk", "biggest",
   "paling", "crazy", "gila", "insane", "amazing", "keren", "you", "kamu", "anda",
@@ -114,11 +114,11 @@ const HIGHLIGHT_WORDS = new Set([
   "lose", "kalah", "fail", "gagal", "mistake", "kesalahan", "truth", "fakta",
 ]);
 
-function isHighlight(word: string): boolean {
+export function isHighlight(word: string): boolean {
   return HIGHLIGHT_WORDS.has(word.toLowerCase().replace(/[^a-z]/g, "")) || /\d/.test(word);
 }
 
-function chunkWords(
+export function chunkWords(
   cues: TranscriptCue[],
   maxWords: number,
   maxChars: number

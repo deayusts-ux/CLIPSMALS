@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CaptionTemplate, TranscriptCue } from "@/lib/types";
+import { chunkWords, isHighlight } from "@/lib/captions";
 import {
   STUDIO_BANNER_END,
   STUDIO_RED,
@@ -45,10 +46,6 @@ const SAMPLE: TranscriptCue[] = [
     ],
   },
 ];
-
-const HIGHLIGHT = new Set([
-  "secret", "nobody", "you", "million", "free", "best", "never", "stop", "crazy",
-]);
 
 export function CaptionPreview({
   template,
@@ -96,16 +93,16 @@ export function CaptionPreview({
     const tagline = studioTagline(data);
     const light = card?.theme === "light";
     return (
-      <div className={`pointer-events-none ${className}`}>
+      <div className={`pointer-events-none select-none ${className}`}>
         {time < STUDIO_BANNER_END && (
           <div
-            className="absolute inset-x-0 flex flex-col items-center gap-[3px]"
+            className="absolute inset-x-0 flex flex-col items-center gap-[3px] transition-all duration-300"
             style={{ top: "11%" }}
           >
             {banner.map((ln, i) => (
               <span
                 key={i}
-                className="px-2 py-[2px] font-headline font-extrabold text-white text-[14px] leading-tight text-center"
+                className="px-2.5 py-[3px] font-['Arial',sans-serif] font-black text-white text-[14px] leading-tight text-center shadow-lg"
                 style={{ background: STUDIO_RED }}
               >
                 {ln}
@@ -113,10 +110,10 @@ export function CaptionPreview({
             ))}
             {tagline && (
               <span
-                className="text-white text-[12px] italic text-center px-2"
+                className="text-white text-[12px] italic text-center px-2 mt-0.5"
                 style={{
                   fontFamily: "Georgia, 'Times New Roman', serif",
-                  textShadow: "1px 1px 0 #000, -1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.8)",
+                  textShadow: "1px 1px 0 #000, -1px 1px 0 #000, 0 2px 4px rgba(0,0,0,0.85)",
                 }}
               >
                 {tagline}
@@ -126,11 +123,11 @@ export function CaptionPreview({
         )}
         {capLines.length > 0 && !card && (
           <div
-            className="absolute font-body font-bold text-white text-[17px] leading-[1.15]"
+            className="absolute font-['Arial',sans-serif] font-bold text-white text-[17px] leading-[1.18] tracking-tight"
             style={{
               left: "6%",
               bottom: "27%",
-              textShadow: "1px 1px 0 #000, 0 3px 8px rgba(0,0,0,0.85)",
+              textShadow: "2px 2px 0 #000, -1px -1px 0 #000, 0 3px 8px rgba(0,0,0,0.9)",
             }}
           >
             {capLines.map((ln, i) => (
@@ -141,19 +138,19 @@ export function CaptionPreview({
         {card && (
           <div
             key={card.start}
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-6 text-center animate-fade-up"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-6 text-center animate-fade-up"
             style={{ background: light ? "#E6E4E1" : "#0A0A0A" }}
           >
             {card.lines.map((ln, li) => (
               <p
                 key={li}
-                className="text-[13px] leading-snug font-body"
+                className="text-[14px] leading-snug font-['Arial',sans-serif]"
                 style={{ color: light ? "#333333" : "#EEEEEE" }}
               >
                 {ln.split(" ").map((word, wi) => (
                   <span
                     key={wi}
-                    className={isStudioKeyword(word) ? "font-extrabold" : ""}
+                    className={isStudioKeyword(word) ? "font-black" : "font-semibold"}
                     style={
                       isStudioKeyword(word)
                         ? { color: light ? STUDIO_RED : "#FFFFFF" }
@@ -172,86 +169,143 @@ export function CaptionPreview({
     );
   }
 
-  const words = data.flatMap((c) => c.words);
-  const activeIdx = words.findIndex((w) => time >= w.start && time < w.end);
+  let visible: {
+    text: string;
+    active: boolean;
+    revealed?: boolean;
+    highlight?: boolean;
+    key: string | number;
+  }[] = [];
 
-  let visible: { text: string; active: boolean; key: number }[] = [];
-  if (template === "hormozi" || template === "cyber") {
-    const chunkSize = template === "hormozi" ? 3 : 4;
-    const idx = activeIdx === -1 ? (time < 0.2 ? 0 : -1) : activeIdx;
-    if (idx >= 0) {
-      const chunkStart = Math.floor(idx / chunkSize) * chunkSize;
-      visible = words.slice(chunkStart, chunkStart + chunkSize).map((w, i) => ({
-        text: w.text.toUpperCase(),
-        active: chunkStart + i === idx,
-        key: chunkStart + i,
-      }));
+  let paddingBottom = "20%";
+
+  if (template === "hormozi") {
+    paddingBottom = "20%";
+    const chunks = chunkWords(data, 3, 24);
+    const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
+    if (currentChunk) {
+      visible = currentChunk.words.map((w, i) => {
+        const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
+        const active = time >= w.start && time < end;
+        return {
+          text: w.text.toUpperCase(),
+          active,
+          highlight: isHighlight(w.text),
+          key: `${w.start}-${w.text}`,
+        };
+      });
     }
   } else if (template === "beast") {
-    if (activeIdx >= 0) {
+    paddingBottom = "23%";
+    const chunks = chunkWords(data, 2, 18);
+    const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
+    if (currentChunk) {
+      const activeWord =
+        currentChunk.words.find((w, i) => {
+          const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
+          return time >= w.start && time < end;
+        }) || currentChunk.words[0];
+      if (activeWord) {
+        visible = [
+          {
+            text: activeWord.text.toUpperCase(),
+            active: true,
+            highlight: isHighlight(activeWord.text),
+            key: `${activeWord.start}-${activeWord.text}`,
+          },
+        ];
+      }
+    }
+  } else if (template === "cyber") {
+    paddingBottom = "20%";
+    const chunks = chunkWords(data, 4, 30);
+    const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
+    if (currentChunk) {
+      visible = currentChunk.words.map((w, i) => {
+        const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
+        const active = time >= w.start && time < end;
+        const revealed = time >= w.start;
+        return {
+          text: w.text.toUpperCase(),
+          active,
+          revealed,
+          highlight: isHighlight(w.text),
+          key: `${w.start}-${w.text}`,
+        };
+      });
+    }
+  } else {
+    // minimal
+    paddingBottom = "14%";
+    const chunks = chunkWords(data, 9, 64);
+    const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
+    if (currentChunk) {
       visible = [
         {
-          text: words[activeIdx].text.toUpperCase(),
+          text: currentChunk.words.map((w) => w.text).join(" "),
           active: true,
-          key: activeIdx,
+          key: currentChunk.start,
         },
       ];
     }
-  } else {
-    const cue = data.find((c) => time >= c.start && time < c.end);
-    if (cue) visible = [{ text: cue.text, active: true, key: cue.start }];
   }
 
   return (
     <div
-      className={`flex items-end justify-center text-center pointer-events-none ${className}`}
-      style={{ paddingBottom: "18%" }}
+      className={`flex items-end justify-center text-center pointer-events-none select-none transition-all ${className}`}
+      style={{ paddingBottom }}
     >
       {template === "minimal" ? (
         visible.map((v) => (
           <div
             key={v.key}
-            className="animate-fade-up px-3 py-1.5 rounded-md bg-black/70 text-white text-[13px] font-body font-semibold max-w-[90%]"
+            className="animate-fade-up px-3.5 py-1.5 rounded-md bg-black/80 text-white text-[13px] font-['Arial',sans-serif] font-semibold max-w-[90%] tracking-wide shadow-md"
           >
             {v.text}
           </div>
         ))
       ) : (
-        <div className="flex flex-wrap items-center justify-center gap-x-1.5 max-w-[94%]">
-          {visible.map((v) => (
-            <span
-              key={`${v.key}-${v.active}`}
-              className={`font-headline font-extrabold leading-tight ${
-                template === "beast" ? "text-[26px]" : "text-[19px]"
-              } ${v.active ? "animate-bounce-word" : ""}`}
-              style={
-                template === "hormozi"
-                  ? {
-                      color: v.active
-                        ? "#F5FF00"
-                        : HIGHLIGHT.has(v.text.toLowerCase())
-                          ? "#FFD700"
-                          : "#FFFFFF",
-                      textShadow:
-                        "2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 3px 6px rgba(0,0,0,0.8)",
-                    }
-                  : template === "beast"
-                    ? {
-                        color: HIGHLIGHT.has(v.text.toLowerCase()) ? "#FF2222" : "#FFFFFF",
-                        textShadow:
-                          "3px 3px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 10px rgba(0,0,0,0.9)",
-                      }
-                    : {
-                        color: v.active ? "#00FFFF" : "#8888AA",
-                        textShadow: v.active
-                          ? "0 0 12px #00FFFF, 0 0 24px #FF00FF, 2px 2px 0 #000"
-                          : "1px 1px 0 #000",
-                      }
-              }
-            >
-              {v.text}
-            </span>
-          ))}
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 max-w-[94%] px-2">
+          {visible.map((v) => {
+            const fontClass =
+              template === "beast"
+                ? "text-[26px] font-black font-['Arial_Black',Impact,sans-serif]"
+                : "text-[20px] font-black font-['Arial_Black',Impact,sans-serif]";
+
+            let styleObj: React.CSSProperties = {};
+            if (template === "hormozi") {
+              styleObj = {
+                color: v.active ? "#F5FF00" : v.highlight ? "#FFD700" : "#FFFFFF",
+                textShadow:
+                  "3px 3px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 3px 8px rgba(0,0,0,0.9)",
+              };
+            } else if (template === "beast") {
+              styleObj = {
+                color: v.highlight ? "#FF2222" : "#FFFFFF",
+                textShadow:
+                  "4px 4px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 5px 12px rgba(0,0,0,0.95)",
+              };
+            } else if (template === "cyber") {
+              styleObj = {
+                color: v.active ? "#00FFFF" : v.revealed ? "#FFFFFF" : "#7A7A9E",
+                textShadow: v.active
+                  ? "0 0 14px #00FFFF, 0 0 28px #FF00FF, 2px 2px 0 #000"
+                  : "1px 1px 0 #000, -1px -1px 0 #000",
+              };
+            }
+
+            return (
+              <span
+                key={`${v.key}-${v.active}`}
+                className={`leading-tight tracking-wider transition-transform duration-100 ${fontClass} ${
+                  v.active ? "animate-bounce-word scale-105" : ""
+                }`}
+                style={styleObj}
+              >
+                {v.text}
+              </span>
+            );
+          })}
         </div>
       )}
     </div>
