@@ -224,12 +224,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       push(chunk.start, chunk.end, `{\\fad(160,120)}${text}`);
     }
   } else if (template === "studio") {
-    const bannerEnd = Math.min(4.5, clipDuration);
+    const firstSpeechStart = cues[0]?.words[0]?.start ?? cues[0]?.start ?? 0;
+    const bannerStart = Math.max(0, firstSpeechStart);
+    const bannerEnd = Math.min(bannerStart + 4.5, clipDuration);
     const bFs = Math.round(h * 0.033);
     const banner = studioBanner(title || cues[0]?.text || "Clip");
     banner.forEach((ln, i) => {
       push(
-        0,
+        bannerStart,
         bannerEnd,
         `{\\an8\\pos(${w / 2},${Math.round(h * 0.11 + i * bFs * 1.35)})}${escapeAss(ln)}`,
         "Banner",
@@ -239,7 +241,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     const tagline = studioTagline(cues);
     if (tagline) {
       push(
-        0,
+        bannerStart,
         bannerEnd,
         `{\\an8\\pos(${w / 2},${Math.round(h * 0.11 + banner.length * bFs * 1.35 + h * 0.012)})}${escapeAss(tagline)}`,
         "Tag",

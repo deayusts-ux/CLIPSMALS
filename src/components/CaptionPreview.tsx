@@ -83,6 +83,14 @@ export function CaptionPreview({
 
   const time = controlled ? controlledTime : innerTime;
 
+  // Find when the speaker actually starts talking in this clip
+  const firstSpeechStart = data[0]?.words[0]?.start ?? data[0]?.start ?? 0;
+
+  // Rule: Do NOT show subtitles or banners before the speaker begins talking!
+  if (time < firstSpeechStart) {
+    return null;
+  }
+
   if (template === "studio") {
     const chunk = studioVisibleChunks(data, title || data[0]?.text || "Clip").find(
       (c) => time >= c.start && time < c.end
@@ -92,9 +100,11 @@ export function CaptionPreview({
     const banner = studioBanner(title || data[0]?.text || "Clip");
     const tagline = studioTagline(data);
     const light = card?.theme === "light";
+    const showBanner = time >= firstSpeechStart && time < firstSpeechStart + STUDIO_BANNER_END;
+
     return (
       <div className={`pointer-events-none select-none ${className}`}>
-        {time < STUDIO_BANNER_END && (
+        {showBanner && (
           <div
             className="absolute inset-x-0 flex flex-col items-center gap-[3px] transition-all duration-300"
             style={{ top: "11%" }}
@@ -183,7 +193,7 @@ export function CaptionPreview({
     paddingBottom = "20%";
     const chunks = chunkWords(data, 3, 24);
     const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
-    if (currentChunk) {
+    if (currentChunk && time >= currentChunk.start) {
       visible = currentChunk.words.map((w, i) => {
         const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
         const active = time >= w.start && time < end;
@@ -199,13 +209,12 @@ export function CaptionPreview({
     paddingBottom = "23%";
     const chunks = chunkWords(data, 2, 18);
     const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
-    if (currentChunk) {
-      const activeWord =
-        currentChunk.words.find((w, i) => {
-          const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
-          return time >= w.start && time < end;
-        }) || currentChunk.words[0];
-      if (activeWord) {
+    if (currentChunk && time >= currentChunk.start) {
+      const activeWord = currentChunk.words.find((w, i) => {
+        const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
+        return time >= w.start && time < end;
+      });
+      if (activeWord && time >= activeWord.start) {
         visible = [
           {
             text: activeWord.text.toUpperCase(),
@@ -220,7 +229,7 @@ export function CaptionPreview({
     paddingBottom = "20%";
     const chunks = chunkWords(data, 4, 30);
     const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
-    if (currentChunk) {
+    if (currentChunk && time >= currentChunk.start) {
       visible = currentChunk.words.map((w, i) => {
         const end = i + 1 < currentChunk.words.length ? currentChunk.words[i + 1].start : currentChunk.end;
         const active = time >= w.start && time < end;
@@ -239,7 +248,7 @@ export function CaptionPreview({
     paddingBottom = "14%";
     const chunks = chunkWords(data, 9, 64);
     const currentChunk = chunks.find((c) => time >= c.start && time < c.end);
-    if (currentChunk) {
+    if (currentChunk && time >= currentChunk.start) {
       visible = [
         {
           text: currentChunk.words.map((w) => w.text).join(" "),
@@ -248,6 +257,11 @@ export function CaptionPreview({
         },
       ];
     }
+  }
+
+  // If no words are active at this moment (e.g. pause between speech), render nothing!
+  if (visible.length === 0) {
+    return null;
   }
 
   return (
