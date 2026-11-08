@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { MEDIA_DIR, sanitizeId } from "@/lib/paths";
 
 export const runtime = "nodejs";
@@ -13,6 +14,25 @@ const MIME: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
 };
+
+function createWebReadableStream(file: string, signal?: AbortSignal, range?: { start: number; end: number }) {
+  const nodeStream = fs.createReadStream(file, range);
+  
+  if (signal) {
+    if (signal.aborted) {
+      nodeStream.destroy();
+    } else {
+      signal.addEventListener("abort", () => nodeStream.destroy(), { once: true });
+    }
+  }
+
+  nodeStream.on("error", () => {
+    // Avoid unhandled crash on early browser disconnect/abort
+    nodeStream.destroy();
+  });
+
+  return Readable.toWeb(nodeStream) as ReadableStream;
+}
 
 export async function GET(
   req: NextRequest,
@@ -56,7 +76,7 @@ export async function GET(
           headers: { "Content-Range": `bytes */${stat.size}` },
         });
       }
-      const stream = fs.createReadStream(file, { start, end });
+      const webStream = createWebReadableStream(file, req.signal, { start, end });
       const headers: Record<string, string> = {
         "Content-Range": `bytes ${start}-${end}/${stat.size}`,
         "Accept-Ranges": "bytes",
@@ -66,14 +86,14 @@ export async function GET(
       if (isDownload) {
         headers["Content-Disposition"] = `attachment; filename="${downloadName}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`;
       }
-      return new NextResponse(stream as unknown as ReadableStream, {
+      return new NextResponse(webStream, {
         status: 206,
         headers,
       });
     }
   }
 
-  const stream = fs.createReadStream(file);
+  const webStream = createWebReadableStream(file, req.signal);
   const headers: Record<string, string> = {
     "Content-Type": mime,
     "Content-Length": String(stat.size),
@@ -83,5 +103,5 @@ export async function GET(
   if (isDownload) {
     headers["Content-Disposition"] = `attachment; filename="${downloadName}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`;
   }
-  return new NextResponse(stream as unknown as ReadableStream, { headers });
+  return new NextResponse(webStream, { headers });
 }
