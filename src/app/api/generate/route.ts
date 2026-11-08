@@ -15,7 +15,7 @@ import { sanitizeId } from "@/lib/paths";
 import type { GenerateSettings, Project } from "@/lib/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 600;
+export const maxDuration = 300;
 
 function validSettings(s: unknown): s is GenerateSettings {
   if (!s || typeof s !== "object") return false;
